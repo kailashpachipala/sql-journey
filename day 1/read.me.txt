@@ -1,0 +1,637 @@
+# SQL SELECT — Complete Exam Notes
+
+---
+
+## What is SELECT?
+
+**SELECT** is a DML (Data Manipulation Language) command used to **retrieve data from one or more tables** in a database.
+
+**Syntax:**
+```sql
+SELECT column1, column2, ...
+FROM table_name
+WHERE condition
+GROUP BY column
+HAVING condition
+ORDER BY column [ASC | DESC];
+```
+
+**Clause Execution Order (Logical):**
+
+| Step | Clause | Purpose |
+|------|--------|---------|
+| 1 | `FROM` | Identify the source table |
+| 2 | `WHERE` | Filter rows before grouping |
+| 3 | `GROUP BY` | Group filtered rows |
+| 4 | `HAVING` | Filter groups |
+| 5 | `SELECT` | Choose columns to display |
+| 6 | `ORDER BY` | Sort the final result |
+
+---
+
+## Sample Database (Used Throughout)
+
+### Table: `students`
+
+```sql
+CREATE TABLE students (
+    student_id   INT PRIMARY KEY,
+    name         VARCHAR(50),
+    branch       VARCHAR(30),
+    age          INT,
+    marks        DECIMAL(5,2),
+    city         VARCHAR(30)
+);
+```
+
+| student_id | name    | branch | age | marks | city      |
+|------------|---------|--------|-----|-------|-----------|
+| 1          | Alice   | CSE    | 20  | 88.50 | Delhi     |
+| 2          | Bob     | ECE    | 21  | 72.00 | Mumbai    |
+| 3          | Charlie | CSE    | 22  | 91.00 | Delhi     |
+| 4          | Diana   | ME     | 20  | 65.00 | Chennai   |
+| 5          | Eve     | CSE    | 21  | 88.50 | Mumbai    |
+| 6          | Frank   | ECE    | 23  | 55.00 | Delhi     |
+| 7          | Grace   | ME     | 22  | 78.00 | Kolkata   |
+| 8          | Hank    | CSE    | 20  | 91.00 | Chennai   |
+
+---
+
+## Problem 1 — Select All Columns
+
+**Q: Retrieve all records from the students table.**
+
+```sql
+SELECT * FROM students;
+```
+
+**Output:** All 8 rows with every column.
+
+> `*` is a **wildcard** that selects all columns. Avoid in production — use explicit column names.
+
+---
+
+## Problem 2 — Select Specific Columns
+
+**Q: Retrieve only name, branch, and marks of all students.**
+
+```sql
+SELECT name, branch, marks
+FROM students;
+```
+
+**Output:**
+
+| name    | branch | marks |
+|---------|--------|-------|
+| Alice   | CSE    | 88.50 |
+| Bob     | ECE    | 72.00 |
+| Charlie | CSE    | 91.00 |
+| Diana   | ME     | 65.00 |
+| Eve     | CSE    | 88.50 |
+| Frank   | ECE    | 55.00 |
+| Grace   | ME     | 78.00 |
+| Hank    | CSE    | 91.00 |
+
+---
+
+## Problem 3 — WHERE Clause (Filtering Rows)
+
+**The `WHERE` clause** filters rows based on a specified condition. Only rows satisfying the condition are returned.
+
+**Q: Retrieve students from the CSE branch.**
+
+```sql
+SELECT * FROM students
+WHERE branch = 'CSE';
+```
+
+**Output:**
+
+| student_id | name    | branch | age | marks | city    |
+|------------|---------|--------|-----|-------|---------|
+| 1          | Alice   | CSE    | 20  | 88.50 | Delhi   |
+| 3          | Charlie | CSE    | 22  | 91.00 | Delhi   |
+| 5          | Eve     | CSE    | 21  | 88.50 | Mumbai  |
+| 8          | Hank    | CSE    | 20  | 91.00 | Chennai |
+
+---
+
+## Problem 4 — WHERE with Comparison Operators
+
+**Comparison Operators:**
+
+| Operator | Meaning |
+|----------|---------|
+| `=` | Equal to |
+| `!=` or `<>` | Not equal to |
+| `>` | Greater than |
+| `<` | Less than |
+| `>=` | Greater than or equal to |
+| `<=` | Less than or equal to |
+
+**Q: Retrieve students who scored more than 80 marks.**
+
+```sql
+SELECT name, marks
+FROM students
+WHERE marks > 80;
+```
+
+**Output:**
+
+| name    | marks |
+|---------|-------|
+| Alice   | 88.50 |
+| Charlie | 91.00 |
+| Eve     | 88.50 |
+| Hank    | 91.00 |
+
+---
+
+## Problem 5 — AND / OR / NOT Operators
+
+**Logical Operators:**
+
+| Operator | Use |
+|----------|-----|
+| `AND` | Both conditions must be true |
+| `OR` | At least one condition must be true |
+| `NOT` | Negates the condition |
+
+**Q (AND): Students from CSE branch AND marks > 85.**
+
+```sql
+SELECT name, branch, marks
+FROM students
+WHERE branch = 'CSE' AND marks > 85;
+```
+
+**Output:**
+
+| name    | branch | marks |
+|---------|--------|-------|
+| Alice   | CSE    | 88.50 |
+| Charlie | CSE    | 91.00 |
+| Eve     | CSE    | 88.50 |
+| Hank    | CSE    | 91.00 |
+
+---
+
+**Q (OR): Students from CSE OR ECE branch.**
+
+```sql
+SELECT name, branch
+FROM students
+WHERE branch = 'CSE' OR branch = 'ECE';
+```
+
+**Output:**
+
+| name    | branch |
+|---------|--------|
+| Alice   | CSE    |
+| Bob     | ECE    |
+| Charlie | CSE    |
+| Eve     | CSE    |
+| Frank   | ECE    |
+| Hank    | CSE    |
+
+---
+
+**Q (NOT): Students NOT from CSE.**
+
+```sql
+SELECT name, branch
+FROM students
+WHERE NOT branch = 'CSE';
+```
+
+**Output:**
+
+| name  | branch |
+|-------|--------|
+| Bob   | ECE    |
+| Diana | ME     |
+| Frank | ECE    |
+| Grace | ME     |
+
+---
+
+## Problem 6 — BETWEEN Operator
+
+**`BETWEEN`** selects values **within a range, inclusive of both endpoints.**
+
+**Q: Students with marks between 70 and 90.**
+
+```sql
+SELECT name, marks
+FROM students
+WHERE marks BETWEEN 70 AND 90;
+```
+
+**Output:**
+
+| name  | marks |
+|-------|-------|
+| Alice | 88.50 |
+| Bob   | 72.00 |
+| Eve   | 88.50 |
+| Grace | 78.00 |
+
+> `BETWEEN 70 AND 90` is equivalent to `marks >= 70 AND marks <= 90`.
+
+---
+
+## Problem 7 — IN Operator
+
+**`IN`** checks whether a value matches **any value in a given list.** It is shorthand for multiple `OR` conditions.
+
+**Q: Students from Delhi, Mumbai, or Kolkata.**
+
+```sql
+SELECT name, city
+FROM students
+WHERE city IN ('Delhi', 'Mumbai', 'Kolkata');
+```
+
+**Output:**
+
+| name    | city    |
+|---------|---------|
+| Alice   | Delhi   |
+| Bob     | Mumbai  |
+| Charlie | Delhi   |
+| Eve     | Mumbai  |
+| Frank   | Delhi   |
+| Grace   | Kolkata |
+
+> `NOT IN ('Delhi', 'Mumbai')` will exclude those cities.
+
+---
+
+## Problem 8 — LIKE Operator (Pattern Matching)
+
+**`LIKE`** is used for **pattern matching** in string columns.
+
+| Wildcard | Meaning |
+|----------|---------|
+| `%` | Zero or more characters |
+| `_` | Exactly one character |
+
+**Q: Students whose name starts with 'A'.**
+
+```sql
+SELECT name FROM students
+WHERE name LIKE 'A%';
+```
+**Output:** Alice
+
+---
+
+**Q: Students whose name ends with 'e'.**
+
+```sql
+SELECT name FROM students
+WHERE name LIKE '%e';
+```
+**Output:** Alice, Charlie, Grace
+
+---
+
+**Q: Students whose name has exactly 3 characters.**
+
+```sql
+SELECT name FROM students
+WHERE name LIKE '___';
+```
+**Output:** Bob, Eve
+
+---
+
+**Q: Students whose name has 'a' as the second character.**
+
+```sql
+SELECT name FROM students
+WHERE name LIKE '_a%';
+```
+**Output:** Hank
+
+---
+
+## Problem 9 — IS NULL / IS NOT NULL
+
+**`NULL`** means **missing or unknown value.** You cannot use `=` to check for NULL — you must use `IS NULL`.
+
+```sql
+-- Correct
+SELECT * FROM students WHERE city IS NULL;
+
+-- Wrong (never use this)
+SELECT * FROM students WHERE city = NULL;  -- returns no rows
+```
+
+---
+
+## Problem 10 — DISTINCT Keyword
+
+**`DISTINCT`** removes **duplicate values** from the result set.
+
+**Q: List all unique branches.**
+
+```sql
+SELECT DISTINCT branch FROM students;
+```
+
+**Output:**
+
+| branch |
+|--------|
+| CSE    |
+| ECE    |
+| ME     |
+
+---
+
+**Q: Count of unique branches.**
+
+```sql
+SELECT COUNT(DISTINCT branch) AS total_branches
+FROM students;
+```
+
+**Output:** 3
+
+---
+
+## Problem 11 — ORDER BY Clause
+
+**`ORDER BY`** sorts the result set. Default is **ASC (ascending).**
+
+**Q: Students sorted by marks in descending order.**
+
+```sql
+SELECT name, marks
+FROM students
+ORDER BY marks DESC;
+```
+
+**Output:**
+
+| name    | marks |
+|---------|-------|
+| Charlie | 91.00 |
+| Hank    | 91.00 |
+| Alice   | 88.50 |
+| Eve     | 88.50 |
+| Grace   | 78.00 |
+| Bob     | 72.00 |
+| Diana   | 65.00 |
+| Frank   | 55.00 |
+
+---
+
+**Q: Sort by branch (ASC), then by marks (DESC) within each branch.**
+
+```sql
+SELECT name, branch, marks
+FROM students
+ORDER BY branch ASC, marks DESC;
+```
+
+**Output:**
+
+| name    | branch | marks |
+|---------|--------|-------|
+| Charlie | CSE    | 91.00 |
+| Hank    | CSE    | 91.00 |
+| Alice   | CSE    | 88.50 |
+| Eve     | CSE    | 88.50 |
+| Bob     | ECE    | 72.00 |
+| Frank   | ECE    | 55.00 |
+| Grace   | ME     | 78.00 |
+| Diana   | ME     | 65.00 |
+
+---
+
+## Problem 12 — LIMIT / TOP / ROWNUM (Restrict Rows)
+
+**Used to limit the number of rows returned.** Syntax varies by DBMS:
+
+| DBMS | Syntax |
+|------|--------|
+| MySQL / PostgreSQL | `LIMIT n` |
+| SQL Server | `SELECT TOP n` |
+| Oracle | `WHERE ROWNUM <= n` |
+
+**Q: Retrieve the top 3 students by marks.**
+
+```sql
+-- MySQL / PostgreSQL
+SELECT name, marks
+FROM students
+ORDER BY marks DESC
+LIMIT 3;
+```
+
+**Output:**
+
+| name    | marks |
+|---------|-------|
+| Charlie | 91.00 |
+| Hank    | 91.00 |
+| Alice   | 88.50 |
+
+---
+
+## Problem 13 — Aggregate Functions with SELECT
+
+**Aggregate Functions** perform calculations on a set of rows and return a single value.
+
+| Function | Purpose |
+|----------|---------|
+| `COUNT()` | Count of rows |
+| `SUM()` | Total of values |
+| `AVG()` | Average of values |
+| `MAX()` | Maximum value |
+| `MIN()` | Minimum value |
+
+**Q: Find total students, average marks, highest and lowest marks.**
+
+```sql
+SELECT 
+    COUNT(*)        AS total_students,
+    AVG(marks)      AS average_marks,
+    MAX(marks)      AS highest_marks,
+    MIN(marks)      AS lowest_marks,
+    SUM(marks)      AS total_marks
+FROM students;
+```
+
+**Output:**
+
+| total_students | average_marks | highest_marks | lowest_marks | total_marks |
+|----------------|---------------|---------------|--------------|-------------|
+| 8              | 78.625        | 91.00         | 55.00        | 629.00      |
+
+---
+
+## Problem 14 — GROUP BY Clause
+
+**`GROUP BY`** groups rows sharing the same value in specified columns, then applies aggregate functions to each group.
+
+**Q: Count the number of students in each branch.**
+
+```sql
+SELECT branch, COUNT(*) AS student_count
+FROM students
+GROUP BY branch;
+```
+
+**Output:**
+
+| branch | student_count |
+|--------|---------------|
+| CSE    | 4             |
+| ECE    | 2             |
+| ME     | 2             |
+
+---
+
+**Q: Average marks per branch.**
+
+```sql
+SELECT branch, AVG(marks) AS avg_marks
+FROM students
+GROUP BY branch;
+```
+
+**Output:**
+
+| branch | avg_marks |
+|--------|-----------|
+| CSE    | 89.75     |
+| ECE    | 63.50     |
+| ME     | 71.50     |
+
+---
+
+## Problem 15 — HAVING Clause
+
+**`HAVING`** filters groups **after** `GROUP BY`. It is like `WHERE` but operates on aggregated results.
+
+**Key Difference:**
+
+| Clause | Operates On | Used With |
+|--------|-------------|-----------|
+| `WHERE` | Individual rows | Before `GROUP BY` |
+| `HAVING` | Groups / aggregates | After `GROUP BY` |
+
+**Q: Branches with average marks greater than 75.**
+
+```sql
+SELECT branch, AVG(marks) AS avg_marks
+FROM students
+GROUP BY branch
+HAVING AVG(marks) > 75;
+```
+
+**Output:**
+
+| branch | avg_marks |
+|--------|-----------|
+| CSE    | 89.75     |
+| ME     | 71.50     |
+
+> ME is excluded because 71.50 is not > 75. Only CSE qualifies.
+
+---
+
+**Q: Branches with more than 2 students AND average marks above 80.**
+
+```sql
+SELECT branch, COUNT(*) AS cnt, AVG(marks) AS avg_marks
+FROM students
+GROUP BY branch
+HAVING COUNT(*) > 2 AND AVG(marks) > 80;
+```
+
+**Output:**
+
+| branch | cnt | avg_marks |
+|--------|-----|-----------|
+| CSE    | 4   | 89.75     |
+
+---
+
+## Problem 16 — Column Aliases (AS)
+
+**`AS`** assigns a **temporary name (alias)** to a column or table in the output.
+
+```sql
+SELECT 
+    name        AS student_name,
+    marks       AS score,
+    marks * 0.9 AS scaled_score
+FROM students
+WHERE branch = 'CSE';
+```
+
+**Output:**
+
+| student_name | score | scaled_score |
+|--------------|-------|--------------|
+| Alice        | 88.50 | 79.650       |
+| Charlie      | 91.00 | 81.900       |
+| Eve          | 88.50 | 79.650       |
+| Hank         | 91.00 | 81.900       |
+
+---
+
+## Problem 17 — Combining Multiple Clauses (Full Query)
+
+**Q: Find the name and marks of students from CSE or ECE, with marks above 70, sorted by marks descending, showing only top 3.**
+
+```sql
+SELECT name, branch, marks
+FROM students
+WHERE branch IN ('CSE', 'ECE')
+  AND marks > 70
+ORDER BY marks DESC
+LIMIT 3;
+```
+
+**Output:**
+
+| name    | branch | marks |
+|---------|--------|-------|
+| Charlie | CSE    | 91.00 |
+| Hank    | CSE    | 91.00 |
+| Alice   | CSE    | 88.50 |
+
+---
+
+## Quick Revision — Clause Summary Table
+
+| Clause | Purpose | Example |
+|--------|---------|---------|
+| `SELECT` | Choose columns | `SELECT name, marks` |
+| `FROM` | Source table | `FROM students` |
+| `WHERE` | Filter rows | `WHERE marks > 80` |
+| `GROUP BY` | Group rows | `GROUP BY branch` |
+| `HAVING` | Filter groups | `HAVING COUNT(*) > 2` |
+| `ORDER BY` | Sort results | `ORDER BY marks DESC` |
+| `LIMIT` | Restrict row count | `LIMIT 5` |
+| `DISTINCT` | Remove duplicates | `SELECT DISTINCT branch` |
+| `AS` | Rename column/table | `marks AS score` |
+
+---
+
+## Common Exam Traps — Watch Out!
+
+- `WHERE` cannot use aggregate functions — use `HAVING` for that.
+- `NULL` comparisons require `IS NULL`, never `= NULL`.
+- `BETWEEN` is **inclusive** on both ends.
+- `DISTINCT` applies to the **combination** of all selected columns when multiple columns are listed.
+- `ORDER BY` executes **after** `SELECT`, so column aliases defined in `SELECT` can be used in `ORDER BY`.
+- `HAVING` without `GROUP BY` treats the entire table as one group.
