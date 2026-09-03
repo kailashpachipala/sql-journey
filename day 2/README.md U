@@ -1,0 +1,384 @@
+# Aggregation in SQL
+
+## Definition
+
+**Aggregation** is the process of performing a calculation on a set of values and returning a single summary value. Aggregate functions operate on multiple rows and return one result per group (or one result for the entire table if no grouping is specified).
+
+> **Key Rule:** Aggregate functions ignore `NULL` values (except `COUNT(*)`).
+
+---
+
+## Aggregate Functions — Quick Reference
+
+| Function | Syntax | Description |
+|----------|--------|-------------|
+| `COUNT` | `COUNT(col)` / `COUNT(*)` | Counts rows; `COUNT(*)` includes NULLs, `COUNT(col)` excludes them |
+| `SUM` | `SUM(col)` | Sum of all non-NULL values |
+| `AVG` | `AVG(col)` | Average of all non-NULL values |
+| `MAX` | `MAX(col)` | Maximum value in the column |
+| `MIN` | `MIN(col)` | Minimum value in the column |
+
+---
+
+## Sample Table
+
+```sql
+CREATE TABLE Employee (
+    emp_id    INT,
+    name      VARCHAR(50),
+    dept      VARCHAR(30),
+    salary    DECIMAL(10,2),
+    manager   VARCHAR(50)
+);
+```
+
+| emp_id | name    | dept    | salary  | manager |
+|--------|---------|---------|---------|---------|
+| 1      | Alice   | HR      | 60000   | NULL    |
+| 2      | Bob     | IT      | 80000   | Alice   |
+| 3      | Carol   | IT      | 90000   | Alice   |
+| 4      | Dave    | HR      | 55000   | Alice   |
+| 5      | Eve     | Finance | 70000   | Bob     |
+| 6      | Frank   | Finance | 75000   | Bob     |
+
+---
+
+## Core Aggregate Functions
+
+### COUNT
+
+**`COUNT(*)`** counts all rows including NULLs. **`COUNT(column)`** counts only non-NULL values in that column.
+
+```sql
+-- Count all employees
+SELECT COUNT(*) AS total_employees FROM Employee;
+
+-- Count employees who have a manager assigned
+SELECT COUNT(manager) AS employees_with_manager FROM Employee;
+```
+
+**Output — `COUNT(*)`:**
+
+| total_employees |
+|-----------------|
+| 6               |
+
+**Output — `COUNT(manager)`:**
+
+| employees_with_manager |
+|------------------------|
+| 5                      |
+
+> Alice has `NULL` as manager, so `COUNT(manager)` returns 5, not 6.
+
+---
+
+### SUM
+
+**`SUM(column)`** returns the total of all non-NULL numeric values.
+
+```sql
+SELECT SUM(salary) AS total_salary FROM Employee;
+```
+
+**Output:**
+
+| total_salary |
+|--------------|
+| 430000       |
+
+---
+
+### AVG
+
+**`AVG(column)`** returns the arithmetic mean of all non-NULL values.
+
+```sql
+SELECT AVG(salary) AS avg_salary FROM Employee;
+```
+
+**Output:**
+
+| avg_salary |
+|------------|
+| 71666.67   |
+
+> `AVG` = `SUM / COUNT(col)`, not `SUM / COUNT(*)`. NULLs are excluded from both numerator and denominator.
+
+---
+
+### MAX and MIN
+
+```sql
+SELECT MAX(salary) AS highest_salary,
+       MIN(salary) AS lowest_salary
+FROM Employee;
+```
+
+**Output:**
+
+| highest_salary | lowest_salary |
+|----------------|---------------|
+| 90000          | 55000         |
+
+---
+
+## GROUP BY Clause
+
+**`GROUP BY`** divides rows into groups based on one or more columns. The aggregate function is then applied to each group separately, returning one row per group.
+
+**Syntax:**
+```sql
+SELECT column, AGGREGATE_FUNCTION(col)
+FROM table
+GROUP BY column;
+```
+
+### Example — Department-wise salary summary
+
+```sql
+SELECT dept,
+       COUNT(*)      AS num_employees,
+       SUM(salary)   AS total_salary,
+       AVG(salary)   AS avg_salary,
+       MAX(salary)   AS max_salary
+FROM Employee
+GROUP BY dept;
+```
+
+**Output:**
+
+| dept    | num_employees | total_salary | avg_salary | max_salary |
+|---------|---------------|--------------|------------|------------|
+| HR      | 2             | 115000       | 57500      | 60000      |
+| IT      | 2             | 170000       | 85000      | 90000      |
+| Finance | 2             | 145000       | 72500      | 75000      |
+
+---
+
+### GROUP BY — Golden Rule
+
+> **Any column in the `SELECT` clause that is NOT inside an aggregate function MUST appear in the `GROUP BY` clause.**
+
+```sql
+-- WRONG: 'name' is not aggregated and not in GROUP BY
+SELECT dept, name, COUNT(*) FROM Employee GROUP BY dept;
+
+-- CORRECT
+SELECT dept, COUNT(*) FROM Employee GROUP BY dept;
+```
+
+---
+
+## HAVING Clause
+
+**`HAVING`** filters groups after aggregation, just as `WHERE` filters rows before aggregation.
+
+**Syntax:**
+```sql
+SELECT column, AGGREGATE_FUNCTION(col)
+FROM table
+GROUP BY column
+HAVING condition;
+```
+
+### Example — Departments with average salary above 70000
+
+```sql
+SELECT dept, AVG(salary) AS avg_salary
+FROM Employee
+GROUP BY dept
+HAVING AVG(salary) > 70000;
+```
+
+**Output:**
+
+| dept    | avg_salary |
+|---------|------------|
+| IT      | 85000      |
+| Finance | 72500      |
+
+---
+
+## WHERE vs HAVING — Critical Comparison
+
+| Feature | `WHERE` | `HAVING` |
+|---------|---------|----------|
+| Filters | Individual rows | Groups |
+| Executes | Before `GROUP BY` | After `GROUP BY` |
+| Can use aggregate functions | No | Yes |
+| Can use regular columns | Yes | Yes |
+| Mandatory with `GROUP BY` | No | No |
+
+### Example combining WHERE and HAVING
+
+```sql
+-- Find departments (excluding Finance) where avg salary > 60000
+SELECT dept, AVG(salary) AS avg_salary
+FROM Employee
+WHERE dept <> 'Finance'
+GROUP BY dept
+HAVING AVG(salary) > 60000;
+```
+
+**Output:**
+
+| dept | avg_salary |
+|------|------------|
+| IT   | 85000      |
+
+---
+
+## SQL Query Execution Order
+
+Understanding execution order is essential to avoid errors with aggregation:
+
+```
+FROM  →  WHERE  →  GROUP BY  →  HAVING  →  SELECT  →  ORDER BY
+```
+
+This is why:
+- `WHERE` cannot use aliases defined in `SELECT` (SELECT hasn't run yet)
+- `WHERE` cannot use aggregate functions (GROUP BY hasn't run yet)
+- `HAVING` can use aggregate functions (GROUP BY has already run)
+
+---
+
+## DISTINCT with Aggregate Functions
+
+**`DISTINCT`** inside an aggregate function eliminates duplicate values before computing.
+
+```sql
+-- Count distinct departments
+SELECT COUNT(DISTINCT dept) AS num_departments FROM Employee;
+```
+
+**Output:**
+
+| num_departments |
+|-----------------|
+| 3               |
+
+```sql
+-- Sum of unique salary values only
+SELECT SUM(DISTINCT salary) AS sum_unique_salaries FROM Employee;
+```
+
+---
+
+## GROUP BY with Multiple Columns
+
+```sql
+-- Group by both manager and dept
+SELECT manager, dept, COUNT(*) AS team_size
+FROM Employee
+GROUP BY manager, dept;
+```
+
+Each unique combination of `(manager, dept)` forms one group.
+
+---
+
+## Common Exam Scenarios
+
+### Find the employee with the maximum salary
+
+```sql
+-- Using subquery (standard approach)
+SELECT name, salary
+FROM Employee
+WHERE salary = (SELECT MAX(salary) FROM Employee);
+```
+
+**Output:**
+
+| name  | salary |
+|-------|--------|
+| Carol | 90000  |
+
+---
+
+### Find departments where total salary exceeds 140000
+
+```sql
+SELECT dept, SUM(salary) AS total_salary
+FROM Employee
+GROUP BY dept
+HAVING SUM(salary) > 140000;
+```
+
+**Output:**
+
+| dept    | total_salary |
+|---------|--------------|
+| IT      | 170000       |
+| Finance | 145000       |
+
+---
+
+### Count NULL vs non-NULL values
+
+```sql
+SELECT
+    COUNT(*)           AS total_rows,
+    COUNT(manager)     AS non_null_managers,
+    COUNT(*) - COUNT(manager) AS null_managers
+FROM Employee;
+```
+
+**Output:**
+
+| total_rows | non_null_managers | null_managers |
+|------------|-------------------|---------------|
+| 6          | 5                 | 1             |
+
+---
+
+## Nested Aggregation (Subquery-Based)
+
+SQL does not allow `MAX(AVG(...))` directly. Use a subquery instead.
+
+```sql
+-- Find the department with the highest average salary
+SELECT dept, AVG(salary) AS avg_salary
+FROM Employee
+GROUP BY dept
+HAVING AVG(salary) = (
+    SELECT MAX(avg_sal)
+    FROM (
+        SELECT AVG(salary) AS avg_sal
+        FROM Employee
+        GROUP BY dept
+    ) AS dept_avgs
+);
+```
+
+**Output:**
+
+| dept | avg_salary |
+|------|------------|
+| IT   | 85000      |
+
+---
+
+## Quick Revision Summary
+
+| Clause | Purpose | Operates On |
+|--------|---------|-------------|
+| `GROUP BY` | Groups rows by column value | Rows from `FROM`/`WHERE` |
+| `HAVING` | Filters groups by aggregate condition | Groups from `GROUP BY` |
+| `COUNT(*)` | Counts all rows including NULLs | Entire result set / group |
+| `COUNT(col)` | Counts non-NULL values | Entire result set / group |
+| `SUM`, `AVG` | Numeric aggregation, ignores NULLs | Numeric columns |
+| `MAX`, `MIN` | Works on numeric, string, and date types | Any comparable column |
+| `DISTINCT` in aggregate | Eliminates duplicates before aggregating | The specified column |
+
+---
+
+## Common Exam Mistakes to Avoid
+
+- Using `WHERE` instead of `HAVING` to filter on an aggregate condition — this is a **syntax error**.
+- Selecting a non-aggregated, non-grouped column — violates the **GROUP BY rule**.
+- Assuming `COUNT(col)` includes NULLs — it **does not**.
+- Assuming `AVG` divides by total rows — it divides by **non-NULL count only**.
+- Writing `MAX(AVG(...))` directly — SQL **does not allow nested aggregate functions**; use a subquery.
