@@ -1,0 +1,475 @@
+# SQL Clauses and Operations
+
+## Overview
+
+SQL queries are built using a structured set of clauses that filter, group, and refine data. Mastering these clauses — along with arithmetic and logical operations — is essential for writing correct, efficient queries.
+
+---
+
+# WHERE Clause
+
+## Definition and Purpose
+
+**`WHERE` clause** is used to filter rows from a table based on a specified condition, applied *before* any grouping or aggregation. Only rows satisfying the condition are included in the result.
+
+**Syntax:**
+```sql
+SELECT column1, column2
+FROM table_name
+WHERE condition;
+```
+
+### Example Table — `employees`
+
+| emp_id | name    | dept       | salary | age |
+|--------|---------|------------|--------|-----|
+| 1      | Alice   | HR         | 55000  | 30  |
+| 2      | Bob     | IT         | 72000  | 25  |
+| 3      | Carol   | IT         | 68000  | 35  |
+| 4      | David   | Finance    | 45000  | 28  |
+| 5      | Eve     | HR         | 60000  | 40  |
+
+### Example — Simple Filter
+
+```sql
+SELECT name, salary
+FROM employees
+WHERE dept = 'IT';
+```
+
+**Output:**
+
+| name  | salary |
+|-------|--------|
+| Bob   | 72000  |
+| Carol | 68000  |
+
+> Filters rows where `dept` is `'IT'` before returning results.
+
+---
+
+# HAVING Clause
+
+## Definition and Purpose
+
+**`HAVING` clause** is used to filter *groups* formed by `GROUP BY`, based on aggregate values. It is applied *after* grouping and aggregation, unlike `WHERE` which filters individual rows.
+
+**Syntax:**
+```sql
+SELECT column, AGG_FUNC(column)
+FROM table_name
+GROUP BY column
+HAVING condition;
+```
+
+### Example — Filter Groups by Aggregate
+
+```sql
+SELECT dept, AVG(salary) AS avg_salary
+FROM employees
+GROUP BY dept
+HAVING AVG(salary) > 58000;
+```
+
+**Output:**
+
+| dept | avg_salary |
+|------|------------|
+| IT   | 70000      |
+| HR   | 57500      |
+
+> Groups are formed by `dept`, then only groups whose average salary exceeds 58000 are returned.
+
+---
+
+# WHERE vs HAVING — Key Comparison
+
+| Feature | `WHERE` | `HAVING` |
+|---|---|---|
+| **Filters** | Individual rows | Groups (after aggregation) |
+| **Applied** | Before `GROUP BY` | After `GROUP BY` |
+| **Use with aggregate functions** | No | Yes |
+| **Use without `GROUP BY`** | Yes | Technically allowed but unusual |
+| **Example condition** | `WHERE salary > 50000` | `HAVING COUNT(*) > 2` |
+
+> **Exam Tip:** `WHERE` cannot contain aggregate functions like `SUM()`, `AVG()`, `COUNT()`. Use `HAVING` for those.
+
+---
+
+# GROUP BY Clause
+
+## Definition
+
+**`GROUP BY` clause** groups rows sharing the same value in specified columns into summary rows, typically used with aggregate functions.
+
+**Syntax:**
+```sql
+SELECT column, AGG_FUNC(column)
+FROM table_name
+GROUP BY column;
+```
+
+### Example
+
+```sql
+SELECT dept, COUNT(*) AS total_employees, SUM(salary) AS total_salary
+FROM employees
+GROUP BY dept;
+```
+
+**Output:**
+
+| dept    | total_employees | total_salary |
+|---------|-----------------|--------------|
+| HR      | 2               | 115000       |
+| IT      | 2               | 140000       |
+| Finance | 1               | 45000        |
+
+---
+
+# ORDER BY Clause
+
+## Definition
+
+**`ORDER BY` clause** sorts the result set in ascending (`ASC`) or descending (`DESC`) order based on one or more columns. Default order is `ASC`.
+
+**Syntax:**
+```sql
+SELECT column1, column2
+FROM table_name
+ORDER BY column1 [ASC | DESC];
+```
+
+### Example
+
+```sql
+SELECT name, salary
+FROM employees
+ORDER BY salary DESC;
+```
+
+**Output:**
+
+| name  | salary |
+|-------|--------|
+| Bob   | 72000  |
+| Carol | 68000  |
+| Eve   | 60000  |
+| Alice | 55000  |
+| David | 45000  |
+
+### Multi-column Ordering
+
+```sql
+SELECT name, dept, salary
+FROM employees
+ORDER BY dept ASC, salary DESC;
+```
+
+> Sorts primarily by `dept` alphabetically, then by `salary` descending within each department.
+
+---
+
+# Standard SQL Query Execution Order
+
+Understanding the **logical order of clause execution** is a frequent exam question.
+
+```
+FROM → WHERE → GROUP BY → HAVING → SELECT → ORDER BY
+```
+
+| Step | Clause | What Happens |
+|------|--------|--------------|
+| 1 | `FROM` | Identify source tables |
+| 2 | `WHERE` | Filter individual rows |
+| 3 | `GROUP BY` | Group remaining rows |
+| 4 | `HAVING` | Filter groups |
+| 5 | `SELECT` | Select columns / compute expressions |
+| 6 | `ORDER BY` | Sort final results |
+
+> **Exam Tip:** This is why column aliases defined in `SELECT` cannot be used in `WHERE` or `HAVING` — those clauses execute before `SELECT`.
+
+---
+
+# Arithmetic Operations in SQL
+
+## Definition
+
+**Arithmetic operators** perform mathematical calculations on numeric column values or literals within a query.
+
+| Operator | Operation      | Example         |
+|----------|----------------|-----------------|
+| `+`      | Addition       | `salary + 5000` |
+| `-`      | Subtraction    | `salary - 2000` |
+| `*`      | Multiplication | `salary * 1.10` |
+| `/`      | Division       | `salary / 12`   |
+| `%`      | Modulo         | `emp_id % 2`    |
+
+### Example — Computed Columns
+
+```sql
+SELECT name,
+       salary,
+       salary * 1.10 AS salary_after_raise,
+       salary / 12   AS monthly_salary
+FROM employees;
+```
+
+**Output:**
+
+| name  | salary | salary_after_raise | monthly_salary |
+|-------|--------|--------------------|----------------|
+| Alice | 55000  | 60500.00           | 4583.33        |
+| Bob   | 72000  | 79200.00           | 6000.00        |
+| Carol | 68000  | 74800.00           | 5666.67        |
+| David | 45000  | 49500.00           | 3750.00        |
+| Eve   | 60000  | 66000.00           | 5000.00        |
+
+### Example — Arithmetic in WHERE
+
+```sql
+SELECT name, salary
+FROM employees
+WHERE salary * 1.10 > 70000;
+```
+
+> Checks if the raised salary would exceed 70000, filtering at the row level.
+
+---
+
+# Logical Operations in SQL
+
+## Definition
+
+**Logical operators** combine or modify conditions in `WHERE` and `HAVING` clauses to build compound conditions.
+
+---
+
+## AND Operator
+
+**`AND`** returns rows where *all* conditions are true.
+
+```sql
+SELECT name, dept, salary
+FROM employees
+WHERE dept = 'IT' AND salary > 70000;
+```
+
+**Output:**
+
+| name | dept | salary |
+|------|------|--------|
+| Bob  | IT   | 72000  |
+
+---
+
+## OR Operator
+
+**`OR`** returns rows where *at least one* condition is true.
+
+```sql
+SELECT name, dept
+FROM employees
+WHERE dept = 'HR' OR dept = 'Finance';
+```
+
+**Output:**
+
+| name  | dept    |
+|-------|---------|
+| Alice | HR      |
+| David | Finance |
+| Eve   | HR      |
+
+---
+
+## NOT Operator
+
+**`NOT`** negates a condition, returning rows where the condition is false.
+
+```sql
+SELECT name, dept
+FROM employees
+WHERE NOT dept = 'IT';
+```
+
+**Output:**
+
+| name  | dept    |
+|-------|---------|
+| Alice | HR      |
+| David | Finance |
+| Eve   | HR      |
+
+---
+
+## BETWEEN Operator
+
+**`BETWEEN`** filters rows where a column value falls within an inclusive range.
+
+```sql
+SELECT name, salary
+FROM employees
+WHERE salary BETWEEN 55000 AND 70000;
+```
+
+**Output:**
+
+| name  | salary |
+|-------|--------|
+| Alice | 55000  |
+| Carol | 68000  |
+| Eve   | 60000  |
+
+> Equivalent to `salary >= 55000 AND salary <= 70000`. Both endpoints are **inclusive**.
+
+---
+
+## IN Operator
+
+**`IN`** checks whether a value matches any value in a specified list. A cleaner alternative to multiple `OR` conditions.
+
+```sql
+SELECT name, dept
+FROM employees
+WHERE dept IN ('HR', 'Finance');
+```
+
+**Output:**
+
+| name  | dept    |
+|-------|---------|
+| Alice | HR      |
+| David | Finance |
+| Eve   | HR      |
+
+> Equivalent to `WHERE dept = 'HR' OR dept = 'Finance'`.
+
+---
+
+## LIKE Operator
+
+**`LIKE`** performs pattern matching on string values using wildcard characters.
+
+| Wildcard | Meaning | Example |
+|----------|---------|---------|
+| `%` | Zero or more characters | `'A%'` matches Alice, Anna |
+| `_` | Exactly one character | `'_ob'` matches Bob |
+
+```sql
+-- Names starting with 'A'
+SELECT name FROM employees WHERE name LIKE 'A%';
+
+-- Names ending with 'b'
+SELECT name FROM employees WHERE name LIKE '%b';
+
+-- Names with exactly 3 characters
+SELECT name FROM employees WHERE name LIKE '___';
+```
+
+**Output (first query):**
+
+| name  |
+|-------|
+| Alice |
+
+---
+
+## IS NULL / IS NOT NULL
+
+**`IS NULL`** checks for missing values. **`IS NOT NULL`** checks for present values.
+
+```sql
+-- Find employees with no department assigned
+SELECT name FROM employees WHERE dept IS NULL;
+
+-- Find employees who have a department
+SELECT name FROM employees WHERE dept IS NOT NULL;
+```
+
+> **Important:** Never use `= NULL`; always use `IS NULL`. This is a common exam mistake.
+
+---
+
+# Operator Precedence in SQL
+
+When multiple operators appear in a single condition, SQL evaluates them in this order:
+
+| Priority | Operator |
+|----------|----------|
+| 1 (Highest) | Arithmetic: `*`, `/`, `%` |
+| 2 | Arithmetic: `+`, `-` |
+| 3 | Comparison: `=`, `<>`, `<`, `>`, `<=`, `>=` |
+| 4 | `NOT` |
+| 5 | `AND` |
+| 6 (Lowest) | `OR` |
+
+> **Exam Tip:** Always use parentheses to make complex conditions explicit and avoid precedence errors.
+
+### Example — Precedence Trap
+
+```sql
+-- Without parentheses (potentially unexpected result)
+SELECT * FROM employees
+WHERE dept = 'HR' OR dept = 'IT' AND salary > 65000;
+
+-- AND is evaluated first, so this is equivalent to:
+WHERE dept = 'HR' OR (dept = 'IT' AND salary > 65000);
+
+-- Use parentheses to force OR first if needed:
+WHERE (dept = 'HR' OR dept = 'IT') AND salary > 65000;
+```
+
+---
+
+# Putting It All Together — Combined Query
+
+```sql
+SELECT dept,
+       COUNT(*)          AS total_employees,
+       AVG(salary)       AS avg_salary,
+       MAX(salary) * 1.1 AS projected_max
+FROM employees
+WHERE age > 25
+GROUP BY dept
+HAVING AVG(salary) > 50000
+ORDER BY avg_salary DESC;
+```
+
+**Step-by-step execution:**
+
+1. `FROM employees` — load the table
+2. `WHERE age > 25` — exclude employees aged 25 or below (removes Bob)
+3. `GROUP BY dept` — group remaining rows by department
+4. `HAVING AVG(salary) > 50000` — keep only groups with high average salary
+5. `SELECT` — compute count, average, projected max per group
+6. `ORDER BY avg_salary DESC` — sort results highest average first
+
+**Output:**
+
+| dept    | total_employees | avg_salary | projected_max |
+|---------|-----------------|------------|---------------|
+| IT      | 1               | 68000.00   | 74800.00      |
+| HR      | 2               | 57500.00   | 66000.00      |
+| Finance | 1               | 45000.00   | 49500.00      |
+
+> Note: Finance is excluded by `HAVING AVG(salary) > 50000`.
+
+---
+
+# Quick Reference Summary
+
+| Clause / Operator | Purpose | Key Rule |
+|---|---|---|
+| `WHERE` | Filter rows | Before grouping; no aggregates |
+| `GROUP BY` | Group rows | Used with aggregate functions |
+| `HAVING` | Filter groups | After grouping; allows aggregates |
+| `ORDER BY` | Sort results | Last clause executed |
+| `AND` | All conditions true | Higher precedence than `OR` |
+| `OR` | Any condition true | Lower precedence than `AND` |
+| `NOT` | Negate condition | Use with care in compound expressions |
+| `BETWEEN` | Inclusive range check | Endpoints included |
+| `IN` | Match list of values | Cleaner than multiple `OR` |
+| `LIKE` | Pattern matching | `%` = many chars, `_` = one char |
+| `IS NULL` | Check missing value | Never use `= NULL` |
+| `+`, `-`, `*`, `/`, `%` | Math on column values | Usable in `SELECT` and `WHERE` |
